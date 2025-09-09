@@ -2,6 +2,9 @@ const backendURL = "https://ssd-mobilenet-backend.onrender.com"; // <-- replace 
 
 // Start webcam
 const video = document.getElementById("video");
+const canvas = document.getElementById("canvas");
+const ctx = canvas.getContext("2d");
+
 navigator.mediaDevices.getUserMedia({ video: true })
     .then(stream => video.srcObject = stream)
     .catch(err => alert("Error accessing webcam: " + err));
@@ -28,11 +31,25 @@ async function uploadModel() {
     }
 }
 
-// Send webcam frames to backend every second
+// Draw video + detections
+function drawDetections(detections) {
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    detections.forEach(det => {
+        const [startX, startY, endX, endY] = det.box;
+        ctx.strokeStyle = "red";
+        ctx.lineWidth = 2;
+        ctx.strokeRect(startX, startY, endX - startX, endY - startY);
+
+        ctx.fillStyle = "red";
+        ctx.font = "16px Arial";
+        ctx.fillText(`${det.label} (${Math.round(det.confidence*100)}%)`, startX, startY - 5);
+    });
+}
+
+// Send webcam frames to backend every 500ms
 setInterval(async () => {
     if (!video.srcObject) return;
-    const canvas = document.getElementById("canvas");
-    const ctx = canvas.getContext("2d");
+
     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
     const imageData = canvas.toDataURL("image/jpeg").split(",")[1];
 
@@ -43,16 +60,11 @@ setInterval(async () => {
             body: JSON.stringify({ image: imageData })
         });
         const result = await response.json();
-        const detDiv = document.getElementById("detections");
-        detDiv.innerHTML = "";
+
         if (result.detections) {
-            result.detections.forEach(det => {
-                const p = document.createElement("p");
-                p.innerText = `${det.label} (${Math.round(det.confidence*100)}%)`;
-                detDiv.appendChild(p);
-            });
+            drawDetections(result.detections);
         }
     } catch (err) {
         console.log("Detection error:", err);
     }
-}, 1000);
+}, 500);
