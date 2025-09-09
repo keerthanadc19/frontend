@@ -7,19 +7,16 @@
 <body>
     <h2>AI Object Detection</h2>
     
-    <!-- Upload model -->
     <h3>Upload Model</h3>
     <input type="file" id="caffemodel" />
     <input type="file" id="prototxt" />
     <button onclick="uploadModel()">Upload Model</button>
     <p id="uploadStatus"></p>
 
-    <!-- Video stream -->
     <h3>Camera Stream</h3>
     <video id="video" width="640" height="480" autoplay></video>
     <canvas id="canvas" width="640" height="480" style="display:none;"></canvas>
 
-    <!-- Detected objects -->
     <h3>Detections</h3>
     <div id="detections"></div>
 
