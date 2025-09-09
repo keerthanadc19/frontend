@@ -5,11 +5,14 @@ const video = document.createElement("video");
 video.width = 640;
 video.height = 480;
 video.autoplay = true;
-video.style.display = "none"; // keep hidden
-document.body.appendChild(video); // attach to DOM so srcObject works
+video.style.display = "none";
+document.body.appendChild(video);
 
 const canvas = document.getElementById("canvas");
 const ctx = canvas.getContext("2d");
+
+// Flag to check if model is loaded
+let modelLoaded = false;
 
 // Start webcam
 navigator.mediaDevices.getUserMedia({ video: true })
@@ -19,10 +22,11 @@ navigator.mediaDevices.getUserMedia({ video: true })
     })
     .catch(err => alert("Error accessing webcam: " + err));
 
-// Upload model
+// Upload model function
 async function uploadModel() {
     const caffemodelFile = document.getElementById("caffemodel").files[0];
     const prototxtFile = document.getElementById("prototxt").files[0];
+
     if (!caffemodelFile || !prototxtFile) {
         alert("Select both files");
         return;
@@ -35,7 +39,12 @@ async function uploadModel() {
     try {
         const response = await fetch(`${backendURL}/upload_model`, { method: "POST", body: formData });
         const data = await response.json();
-        document.getElementById("uploadStatus").innerText = data.status || "Error: " + data.error;
+        if (data.status) {
+            document.getElementById("uploadStatus").innerText = data.status;
+            modelLoaded = true; // ✅ Enable detection
+        } else {
+            document.getElementById("uploadStatus").innerText = "Error: " + data.error;
+        }
     } catch (err) {
         document.getElementById("uploadStatus").innerText = "Upload failed: " + err;
     }
@@ -56,9 +65,9 @@ function drawDetections(detections) {
     });
 }
 
-// Send webcam frames to backend every 500ms
+// Send webcam frames to backend every 500ms only if model is loaded
 setInterval(async () => {
-    if (!video.srcObject) return;
+    if (!video.srcObject || !modelLoaded) return; // ❌ Skip if model not uploaded
 
     const imageData = canvas.toDataURL("image/jpeg").split(",")[1];
 
@@ -68,9 +77,9 @@ setInterval(async () => {
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ image: imageData })
         });
+
         const result = await response.json();
 
-        // Draw bounding boxes
         if (result.detections) {
             drawDetections(result.detections);
 
